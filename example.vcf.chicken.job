@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH -p medium
+#SBATCH -N 1
+#SBATCH -n 12
+#SBATCH --time=12:00:00
+#SBATCH --error=example.err
+#SBATCH --output=example.out
+
+module purge
+module load samtools/1.3
+module load gatk/3.5
+
+cd ~/epidb.processing/chicken/tissue/
+
+gatk -T UnifiedGenotyper -I example.fixed.bam -R ~/index/gallus_gallus/current_build.fa -o example.vcf -nt 12 -dt NONE -glm SNP -U ALLOW_N_CIGAR_READS -allowPotentiallyMisencodedQuals
+

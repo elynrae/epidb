@@ -1,0 +1,45 @@
+#!/bin/bash
+#SBATCH -p medium
+#SBATCH -N 1
+#SBATCH -n 12
+#SBATCH --time=12:00:00
+#SBATCH --error=example.err
+#SBATCH --output=example.out
+
+module purge
+module load sratoolkit/2.5.2
+module load bowtie2/2.2.6
+module load tophat/2.1.0
+module load picard/2.2.4
+module load samtools/1.3
+
+cd ~/epidb.processing/horse/tissue/
+
+data_b="example_2.fastq"
+if [ -e ${data_b} ]
+    then tophat2 -p 12 -o example ~/index/equus_caballus/current_build example_1.fastq example_2.fastq
+else
+    tophat2 -p 12 -o example ~/index/equus_caballus/current_build  example_1.fastq
+fi
+
+bam_file="example/accepted_hits.bam"
+if [ -e ${bam_file} ]
+    then picard AddOrReplaceReadGroups I=example/accepted_hits.bam O=example.fixed.bam RGLB=all RGPL=illumina RGPU=1 RGSM=example
+else
+    rm -r example
+    if [ -e ${data_b} ]
+	then
+	    bowtie2 -p 12 -x ~/index/equus_caballus/current_build -1 example_1.fastq -2 example_2.fastq -S example.sam
+	    samtools view -bh example.sam > example.bam
+	    samtools sort example.bam > example.sorted.bam
+    else
+	bowtie2 -p 12 -x ~/index/equus_caballus/current_build -U example_1.fastq -S example.sam
+	samtools view -bh example.sam > example.bam
+	samtools sort example.bam > example.sorted.bam
+    fi
+    picard AddOrReplaceReadGroups I=example.sorted.bam O=example.fixed.bam RGLB=all RGPL=illumina RGPU=1 RGSM=example
+    rm example.sam example.bam example.sorted.bam
+fi
+
+samtools index example.fixed.bam
+
